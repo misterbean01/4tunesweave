@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortune's Weave Unit Planner</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        /* Space at bottom so fixed sidebar doesn't cover content */
+        margin-bottom: 260px;
+      }
+
+      .container {
+        display: flex;
+        width: 100%;
+        max-width: 1000px;
+        gap: 20px;
+        justify-content: space-between;
+      }
+
+      .routes {
+        flex-grow: 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .route-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .route-card h3 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .route-slot {
+        border: 2px dashed #aaa;
+        padding: 10px;
+        background: #fff;
+        border-radius: 5px;
+        box-sizing: border-box;
+        /* Grid Layout for items */
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 100px);
+        grid-auto-rows: 100px;
+        grid-auto-flow: row;
+        gap: 10px;
+        align-content: start;
+        /* Resizable Controls */
+        min-height: 180px;
+        max-height: 80vh;
+        height: auto;
+        overflow-y: auto;
+        resize: vertical;
+      }
+
+      .sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 15px;
+        background: #f9f9f9;
+        border-top: 2px solid #ccc;
+        z-index: 1000;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 100px);
+        grid-auto-rows: 100px;
+        gap: 10px;
+        justify-content: center;
+        align-content: start;
+        max-height: 250px;
+        overflow-y: auto;
+      }
+
+      .draggable {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #e2e2e2;
+        box-sizing: border-box;
+        padding: 4px;
+        cursor: grab;
+        border-radius: 5px;
+        border: 1px solid #999;
+        width: 100px;
+        height: 100px;
+        min-width: 100px;
+        min-height: 100px;
+        max-width: 100px;
+        max-height: 100px;
+        user-select: none;
+      }
+
+      .unit-name {
+        font-size: 11px;
+        font-weight: bold;
+        text-align: center;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        width: 100%;
+      }
+
+      .faction {
+        font-size: 9px;
+        color: #555;
+        text-align: center;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        width: 100%;
+      }
+
+      .unit-img {
+        display: block;
+        margin-top: 2px;
+        pointer-events: none;
+        /* Prevents image drag conflicts */
+      }
+
+      /* Save & Load Buttons */
+      .controls-bar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .action-btn {
+        padding: 10px 15px;
+        font-size: 14px;
+        font-weight: bold;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        display: inline-block;
+        transition: background-color 0.2s ease;
+      }
+
+      .action-btn:hover {
+        background-color: #0056b3;
+      }
+
+      .load-btn {
+        background-color: #28a745;
+      }
+
+      .load-btn:hover {
+        background-color: #218838;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Fortune's Weave Route Planner</h1>
+    <div class="controls-bar">
+      <button onclick="exportToCSV()" class="action-btn">Save Layout (CSV)</button>
+      <label class="action-btn load-btn"> Load Layout (CSV) <input type="file" id="import-csv" accept=".csv" onchange="importFromCSV(event)" style="display: none;">
+      </label>
+    </div>
+    <div class="container">
+      <div class="routes">
+        <div class="route-card">
+          <h3>Ribeira Winds</h3>
+          <div class="route-slot" id="ribeira-winds" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <div class="draggable" id="cai" draggable="true" ondragstart="drag(event)">
+              <div class="unit-name">Cai</div>
+              <div class="faction">Ribeira Winds</div>
+              <img src="images/cai.png" class="unit-img" width="40" height="40">
+            </div>
+          </div>
+        </div>
+        <div class="route-card">
+          <h3>House Lamine</h3>
+          <div class="route-slot" id="house-lamine" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <div class="draggable" id="dietrich" draggable="true" ondragstart="drag(event)">
+              <div class="unit-name">Dietrich</div>
+              <div class="faction">House Lamine</div>
+              <img src="images/dietrich.png" class="unit-img" width="40" height="40">
+            </div>
+          </div>
+        </div>
+        <div class="route-card">
+          <h3>Megaira's Beacon</h3>
+          <div class="route-slot" id="megairas-beacon" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <div class="draggable" id="theodora" draggable="true" ondragstart="drag(event)">
+              <div class="unit-name">Theodora</div>
+              <div class="faction">Megaira's Beacon</div>
+              <img src="images/theodora.png" class="unit-img" width="40" height="40">
+            </div>
+          </div>
+        </div>
+        <div class="route-card">
+          <h3>Rose Tempest</h3>
+          <div class="route-slot" id="rose-tempest" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <div class="draggable" id="leda" draggable="true" ondragstart="drag(event)">
+              <div class="unit-name">Leda</div>
+              <div class="faction">Rose Tempest</div>
+              <img src="images/leda.png" class="unit-img" width="40" height="40">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar" id="character-pool" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <!-- The Savior's Army -->
+        <div class="draggable" id="eshmel" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Eshmel</div>
+          <div class="faction">The Savior's Army</div>
+          <img src="images/eshmel.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="hong-hua" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Hong Hua</div>
+          <div class="faction">The Savior's Army</div>
+          <img src="images/hong-hua.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="troy" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Troy</div>
+          <div class="faction">The Savior's Army</div>
+          <img src="images/troy.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Ribeira Winds -->
+        <div class="draggable" id="tialla" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Tialla</div>
+          <div class="faction">Ribeira Winds</div>
+          <img src="images/tialla.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="peter" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Peter</div>
+          <div class="faction">Ribeira Winds</div>
+          <img src="images/peter.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="ultand" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Ultand</div>
+          <div class="faction">Ribeira Winds</div>
+          <img src="images/ultand.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- House Lamine -->
+        <div class="draggable" id="fabio" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Fabio</div>
+          <div class="faction">House Lamine</div>
+          <img src="images/fabio.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="esmeralda" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Esmeralda</div>
+          <div class="faction">House Lamine</div>
+          <img src="images/esmeralda.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="mikaela" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Mikaela</div>
+          <div class="faction">House Lamine</div>
+          <img src="images/mikaela.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Megaira's Beacon -->
+        <div class="draggable" id="bonaventure" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Bonaventure</div>
+          <div class="faction">Megaira's Beacon</div>
+          <img src="images/bonaventure.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="tobias" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Tobias</div>
+          <div class="faction">Megaira's Beacon</div>
+          <img src="images/tobias.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="lysander" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Lysander</div>
+          <div class="faction">Megaira's Beacon</div>
+          <img src="images/lysander.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="lilian" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Lilian</div>
+          <div class="faction">Megaira's Beacon</div>
+          <img src="images/lilian.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Rose Tempest -->
+        <div class="draggable" id="buccar" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Buccar</div>
+          <div class="faction">Rose Tempest</div>
+          <img src="images/buccar.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="sirocco" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Sirocco</div>
+          <div class="faction">Rose Tempest</div>
+          <img src="images/sirocco.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="mu" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Mu</div>
+          <div class="faction">Rose Tempest</div>
+          <img src="images/mu.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="olympia" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Olympia</div>
+          <div class="faction">Rose Tempest</div>
+          <img src="images/olympia.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Mane of Flames -->
+        <div class="draggable" id="bertrand" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Bertrand</div>
+          <div class="faction">Mane of Flames</div>
+          <img src="images/bertrand.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="gaitz" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Gaitz</div>
+          <div class="faction">Mane of Flames</div>
+          <img src="images/gaitz.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="dante" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Dante</div>
+          <div class="faction">Mane of Flames</div>
+          <img src="images/dante.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="goliath" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Goliath</div>
+          <div class="faction">Mane of Flames</div>
+          <img src="images/goliath.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="jester" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Jester</div>
+          <div class="faction">Mane of Flames</div>
+          <img src="images/jester.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- The Moon's Lie -->
+        <div class="draggable" id="talimun" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Talimun</div>
+          <div class="faction">The Moon's Lie</div>
+          <img src="images/talimun.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="ursula" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Ursula</div>
+          <div class="faction">The Moon's Lie</div>
+          <img src="images/ursula.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="simon" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Simon</div>
+          <div class="faction">The Moon's Lie</div>
+          <img src="images/simon.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="luludiya" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Luludiya</div>
+          <div class="faction">The Moon's Lie</div>
+          <img src="images/luludiya.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="fianna" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Fianna</div>
+          <div class="faction">The Moon's Lie</div>
+          <img src="images/fianna.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Linarian Morning Dew -->
+        <div class="draggable" id="orchel" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Orchel</div>
+          <div class="faction">Linarian Morning Dew</div>
+          <img src="images/orchel.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="diego" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Diego</div>
+          <div class="faction">Linarian Morning Dew</div>
+          <img src="images/diego.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="ninae" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Ninae</div>
+          <div class="faction">Linarian Morning Dew</div>
+          <img src="images/ninae.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="seteth" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Seteth</div>
+          <div class="faction">Linarian Morning Dew</div>
+          <img src="images/seteth.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="loretta" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Loretta</div>
+          <div class="faction">Linarian Morning Dew</div>
+          <img src="images/loretta.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Brides of the White Raven -->
+        <div class="draggable" id="anatolia" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Anatolia</div>
+          <div class="faction">Brides of the White Raven</div>
+          <img src="images/anatolia.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="sha-lan" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Sha Lan</div>
+          <div class="faction">Brides of the White Raven</div>
+          <img src="images/sha-lan.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="nezha" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Nezha</div>
+          <div class="faction">Brides of the White Raven</div>
+          <img src="images/nezha.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="daito" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Daito</div>
+          <div class="faction">Brides of the White Raven</div>
+          <img src="images/daito.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="halvin" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Halvin</div>
+          <div class="faction">Brides of the White Raven</div>
+          <img src="images/halvin.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Dagdan Temples -->
+        <div class="draggable" id="centurion" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Centurion</div>
+          <div class="faction">Dagdan Temples</div>
+          <img src="images/centurion.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="sofia" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Sofia</div>
+          <div class="faction">Dagdan Temples</div>
+          <img src="images/sofia.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Arago's Elite Squad -->
+        <div class="draggable" id="nathan" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Nathan</div>
+          <div class="faction">Arago's Elite Squad</div>
+          <img src="images/nathan.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="creek" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Creek</div>
+          <div class="faction">Arago's Elite Squad</div>
+          <img src="images/creek.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Regional & Specialized Factions -->
+        <div class="draggable" id="peppe" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Peppe</div>
+          <div class="faction">Brigid Army</div>
+          <img src="images/peppe.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="benditz" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Benditz</div>
+          <div class="faction">Knights of the Thundercloud</div>
+          <img src="images/benditz.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="alexandra" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Alexandra</div>
+          <div class="faction">Silver Knights of Therus</div>
+          <img src="images/alexandra.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="nuzzuo" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Nuzzuo</div>
+          <div class="faction">Hal Hali Tribe</div>
+          <img src="images/nuzzuo.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="jasmine" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Jasmine</div>
+          <div class="faction">Palman Rain</div>
+          <img src="images/jasmine.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="inioni" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Inioni</div>
+          <div class="faction">Comrades of Braganca</div>
+          <img src="images/inioni.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="zarcone" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Zarcone</div>
+          <div class="faction">Gaia Brigade</div>
+          <img src="images/zarcone.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="kiroika" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Kiroika</div>
+          <div class="faction">Black Bird Pirates</div>
+          <img src="images/kiroika.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Other Recruitable / Free Agents -->
+        <div class="draggable" id="guzran" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Guzran</div>
+          <div class="faction">Free Agent</div>
+          <img src="images/guzran.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="nydine" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Nydine</div>
+          <div class="faction">Free Agent</div>
+          <img src="images/nydine.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="io" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Io</div>
+          <div class="faction">Free Agent</div>
+          <img src="images/io.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="catania" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Catania</div>
+          <div class="faction">Free Agent</div>
+          <img src="images/catania.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="noctula" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Noctula</div>
+          <div class="faction">Free Agent</div>
+          <img src="images/noctula.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="yang-jie" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Yang Jie</div>
+          <div class="faction">Free Agent</div>
+          <img src="images/yang-jie.png" class="unit-img" width="50" height="50">
+        </div>
+        <div class="draggable" id="majide" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Majide</div>
+          <div class="faction">Free Agent</div>
+          <img src="images/majide.png" class="unit-img" width="50" height="50">
+        </div>
+        <!-- Other Affiliations / Free Agents -->
+        <div class="draggable" id="maria" draggable="true" ondragstart="drag(event)">
+          <div class="unit-name">Maria</div>
+          <div class="faction">Free Agent</div>
+          <img src="images/maria.png" class="unit-img" width="50" height="50">
+        </div>
+      </div>
+    </div>
+    <script>
+      // --- Drag and Drop Handlers ---
+      function allowDrop(ev) {
+        ev.preventDefault();
+      }
+
+      function drag(ev) {
+        ev.dataTransfer.setData("text/plain", ev.target.id);
+        if (ev.dataTransfer.setDragImage) {
+          ev.dataTransfer.setDragImage(ev.target, 50, 50);
+        }
+      }
+
+      function drop(ev) {
+        ev.preventDefault();
+        var data = ev.dataTransfer.getData("text/plain");
+        var draggedElement = document.getElementById(data);
+        if (draggedElement) {
+          ev.currentTarget.appendChild(draggedElement);
+        }
+      }
+      // --- CSV Save / Load Handlers ---
+      function exportToCSV() {
+        let csvContent = "data:text/csv;charset=utf-8,UnitID,SlotID\n";
+        const allContainers = document.querySelectorAll('.route-slot, .sidebar');
+        allContainers.forEach(container => {
+          const slotId = container.id;
+          const units = container.querySelectorAll('.draggable');
+          units.forEach(unit => {
+            csvContent += `${unit.id},${slotId}\n`;
+          });
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "fortunes_weave_layout.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      function importFromCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const lines = e.target.result.split('\n');
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            const [unitId, slotId] = line.split(',');
+            const unitElement = document.getElementById(unitId);
+            const slotElement = document.getElementById(slotId);
+            if (unitElement && slotElement) {
+              slotElement.appendChild(unitElement);
+            }
+          }
+          event.target.value = '';
+        };
+        reader.readAsText(file);
+      }
+    </script>
+  </body>
+</html>
